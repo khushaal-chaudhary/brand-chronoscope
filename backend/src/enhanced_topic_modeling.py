@@ -41,8 +41,8 @@ class EnhancedTopicModeler:
             
             # Custom UMAP for small datasets
             umap_model = UMAP(
-                n_neighbors=3,  # Small for limited docs
-                n_components=5,  # Lower dimensions
+                n_neighbors=3,
+                n_components=5,
                 min_dist=0.0,
                 metric='cosine',
                 random_state=42
@@ -50,19 +50,41 @@ class EnhancedTopicModeler:
             
             # Custom HDBSCAN for small datasets
             hdbscan_model = HDBSCAN(
-                min_cluster_size=2,  # Very small clusters allowed
+                min_cluster_size=2,
                 min_samples=1,
                 metric='euclidean',
                 cluster_selection_method='eom',
                 prediction_data=True
             )
             
-            # Custom vectorizer to remove common words
+            # Enhanced stop words list
+            custom_stop_words = list(CountVectorizer(stop_words='english').get_stop_words())
+            custom_stop_words.extend([
+                # Generic adjectives
+                'new', 'old', 'good', 'bad', 'best', 'better', 'worse', 'worst',
+                'big', 'small', 'large', 'little', 'great', 'major', 'minor',
+                'high', 'low', 'long', 'short', 'many', 'much', 'few', 'several',
+                # Time related
+                'year', 'years', 'month', 'months', 'day', 'days', 'time', 'times',
+                'fiscal', 'annual', 'quarter', 'period', 'date', 'today', 'tomorrow',
+                # Generic business terms
+                'company', 'business', 'corporation', 'million', 'billion', 'thousand',
+                'percent', 'number', 'amount', 'total', 'level', 'rate',
+                # Common verbs that don't add meaning
+                'make', 'made', 'making', 'help', 'helped', 'helping', 'become',
+                'provide', 'provided', 'providing', 'include', 'including', 'included',
+                'continue', 'continued', 'continuing', 'remain', 'remained',
+                # Document words
+                'page', 'section', 'table', 'figure', 'note', 'item', 'part'
+            ])
+            
+            # Custom vectorizer with enhanced stop words
             vectorizer_model = CountVectorizer(
-                stop_words='english',
-                min_df=1,  # Words can appear in just 1 document
-                max_df=0.95,  # Remove words that appear in 95% of docs
-                ngram_range=(1, 3)  # Include bigrams and trigrams
+                stop_words=custom_stop_words,
+                min_df=1,
+                max_df=0.95,
+                ngram_range=(1, 3),
+                token_pattern=r'\b[a-zA-Z][a-zA-Z]+\b'
             )
             
             # Initialize BERTopic with custom components

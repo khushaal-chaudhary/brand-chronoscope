@@ -18,6 +18,7 @@ from collections import Counter
 import sys
 from src.semantic_drift_analyzer import SemanticDriftAnalyzer
 from src.keyword_clustering import KeywordClusterer
+from src.enhanced_topic_modeling import EnhancedTopicModeler
 
 sys.path.append(str(Path(__file__).parent))
 
@@ -25,6 +26,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 semantic_analyzer = None
+topic_modeler = None
 
 app = FastAPI(
     title="Brand Chronoscope API",
@@ -144,40 +146,86 @@ async def analyze_dataset(dataset_name: str, analysis_type: str = "keyword", wor
         }
     
     elif analysis_type == "topic":
+        global topic_modeler
+        
         try:
-            clusterer = KeywordClusterer()
-            theme_results = clusterer.analyze_theme_evolution(df)
+            if topic_modeler is None:
+                logger.info("Initializing enhanced topic modeler...")
+                topic_modeler = EnhancedTopicModeler()
             
-            # Format results for frontend
-            topics_by_year = []
-            if theme_results and 'keywords_by_year' in theme_results:
-                for year, keywords in theme_results['keywords_by_year'].items():
-                    # Get top meaningful keywords (filter out short ones)
-                    meaningful_keywords = []
-                    for keyword, score in keywords[:10]:  # Top 10 keywords
-                        if len(keyword) > 3 and not keyword.isdigit():
-                            meaningful_keywords.append({
-                                "word": keyword,
-                                "count": round(score * 100)  # Convert score to pseudo-count
-                            })
+            logger.info("Running enhanced topic discovery...")
+            
+            # Use the enhanced topic discovery
+            results = topic_modeler.discover_topics_enhanced(df)
+            
+            if results.get("success"):
+                # Format for frontend
+                topics_by_year = []
+                
+                # Convert topics_by_year from the enhanced model
+                for year in sorted(df['year'].unique()):
+                    # Get keywords for this year using keyword clustering as fallback
+                    from src.keyword_clustering import KeywordClusterer
+                    clusterer = KeywordClusterer()
+                    keywords_by_year = clusterer.extract_keywords_tfidf(df[df['year'] == year], top_n=10)
                     
-                    if meaningful_keywords:
-                        topics_by_year.append({
-                            "year": year,
-                            "topics": meaningful_keywords[:5]  # Top 5 per year
-                        })
-            
-            return {
-                "status": "success",
-                "data": {
-                    "topics": topics_by_year,
-                    "themes": theme_results.get('themes', {}),
-                    "emerging": theme_results.get('emerging', [])
+                    if year in keywords_by_year:
+                        topics = []
+                        for keyword, score in keywords_by_year[year][:5]:
+                            # Filter out common words
+                            if keyword.lower() not in ['year', 'years', 'fiscal', 'annual', 'company', 'million', 'billion']:
+                                topics.append({
+                                    "word": keyword,
+                                    "count": int(score * 100)  # Convert to pseudo-count
+                                })
+                        
+                        if topics:
+                            topics_by_year.append({
+                                "year": int(year),
+                                "topics": topics
+                            })
+                
+                return {
+                    "status": "success",
+                    "data": {
+                        "topics": topics_by_year,
+                        "num_topics": results.get("num_topics", 0),
+                        "emerging_themes": results.get("emerging_themes", [])
+                    }
                 }
-            }
+            else:
+                # Fallback to keyword clustering if BERTopic fails
+                logger.warning("BERTopic failed, falling back to keyword clustering")
+                from src.keyword_clustering import KeywordClusterer
+                clusterer = KeywordClusterer()
+                theme_results = clusterer.analyze_theme_evolution(df)
+                
+                topics_by_year = []
+                if theme_results and 'keywords_by_year' in theme_results:
+                    for year, keywords in theme_results['keywords_by_year'].items():
+                        meaningful_keywords = []
+                        for keyword, score in keywords[:10]:
+                            if len(keyword) > 3 and not keyword.isdigit():
+                                if keyword.lower() not in ['year', 'years', 'fiscal', 'annual', 'company']:
+                                    meaningful_keywords.append({
+                                        "word": keyword,
+                                        "count": round(score * 100)
+                                    })
+                        
+                        if meaningful_keywords:
+                            topics_by_year.append({
+                                "year": year,
+                                "topics": meaningful_keywords[:5]
+                            })
+                
+                return {
+                    "status": "success",
+                    "data": {"topics": topics_by_year}
+                }
+                
         except Exception as e:
-            logger.error(f"Error in topic analysis: {e}")
-            # Fallback to simple topic modeling
+            logger.error(f"Error in enhanced topic analysis: {e}")
+            # Final fallback to simple topic modeling
             topics = simple_topic_modeling(df)
             return {
                 "status": "success",
@@ -401,17 +449,21 @@ def simple_topic_modeling(df: pd.DataFrame) -> List[Dict]:
     
     topics_by_year = []
     
-    for year in sorted(df['year'].unique())[-5:]:  # Last 5 years
+    # Comprehensive stop words list
+    stop_words = {
+        'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for',
+        'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were',
+        'year', 'years', 'fiscal', 'annual', 'quarter', 'million', 'billion',
+        'company', 'business', 'help', 'make', 'also', 'well', 'will', 'would'
+    }
+    
+    for year in sorted(df['year'].unique())[-5:]:
         year_text = ' '.join(df[df['year'] == year]['text'].astype(str).tolist()).lower()
         
-        # Remove common words
-        stop_words = {'the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 
-                     'of', 'with', 'by', 'from', 'as', 'is', 'was', 'are', 'were'}
-        
-        words = [w for w in year_text.split() if w not in stop_words and len(w) > 3]
+        words = [w for w in year_text.split() 
+                if w not in stop_words and len(w) > 3 and w.isalpha()]
         word_freq = Counter(words)
         
-        # Get top topics
         top_words = word_freq.most_common(5)
         
         topics_by_year.append({
