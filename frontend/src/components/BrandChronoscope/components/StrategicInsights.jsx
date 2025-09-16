@@ -14,10 +14,7 @@ const StrategicInsights = ({ datasetInfo, emergingTerms, decliningTerms }) => {
       
       <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.6' }}>
         <strong>What I Found:</strong> After running transformer-based NLP and statistical analysis 
-        on Microsoft's communications, I identified {totalTrends} significant language shifts. 
-        Not just word counting - I'm tracking semantic evolution and contextual changes 
-        that reveal strategic pivots about 6-12 months before they show up in product announcements. 
-        Turns out language leads strategy, not the other way around.
+        on Microsoft's communications, I identified {totalTrends} significant language shifts. This isn't just academic, these semantic shifts consistently predate product and strategy announcements by 6 to 12 months. It confirms that what a company <em>is going to do</em> shows up in how they <em>talk</em> first.
       </p>
       
       <div className="insights-grid">
