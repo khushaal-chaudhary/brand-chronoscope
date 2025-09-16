@@ -55,8 +55,7 @@ const TopicDiscovery = ({ topicData }) => {
     <div style={{ width: '100%' }}>
       <h3 className="section-title">AI-Powered Topic Discovery</h3>
       <p className="section-description">
-        I let the algorithms find themes instead of searching for pre-defined keywords. 
-        Turns out computers are better at finding patterns than humans - who knew? 
+        I skip the keyword guesswork and let algorithms discover the actual narrative. They're simply better at it. 
         This approach caught "metaverse" rising and falling faster than a cryptocurrency pump-and-dump.
       </p>
       
