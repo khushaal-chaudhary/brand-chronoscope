@@ -1,6 +1,10 @@
 // components/SemanticDrift.jsx
 import React, { useState } from 'react';
 
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:8000'
+  : 'https://Khushaal-brand-chronoscope-api.hf.space';
+
 const SemanticDrift = ({ semanticDriftData: initialData }) => {
   const [selectedWord, setSelectedWord] = useState('platform');
   const [customWord, setCustomWord] = useState('');
@@ -14,7 +18,7 @@ const SemanticDrift = ({ semanticDriftData: initialData }) => {
     try {
       // Call the API to analyze semantic drift for the selected word
       const response = await fetch(
-        `http://127.0.0.1:8000/api/analyze-dataset?dataset_name=microsoft&analysis_type=semantic-drift&word=${wordToAnalyze}`,
+        `${API_URL}/api/analyze-dataset?dataset_name=microsoft&analysis_type=semantic-drift&word=${wordToAnalyze}`,
         { method: 'POST' }
       );
       

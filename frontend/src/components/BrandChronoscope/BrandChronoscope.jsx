@@ -2,7 +2,8 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import './BrandChronoscope.css';
 
-// Import child components (we'll create these next)
+
+// Import child components
 import Header from './components/Header';
 import DataSourceSelector from './components/DataSourceSelector';
 import TabNavigation from './components/TabNavigation';
@@ -11,6 +12,10 @@ import TopicDiscovery from './components/TopicDiscovery';
 import NarrativeEvolution from './components/NarrativeEvolution';
 import StrategicInsights from './components/StrategicInsights';
 import SemanticDrift from './components/SemanticDrift';
+
+const API_URL = window.location.hostname === 'localhost' 
+  ? 'http://127.0.0.1:8000'
+  : 'https://Khushaal-brand-chronoscope-api.hf.space';
 
 const BrandChronoscope = () => {
   // State management
@@ -27,7 +32,8 @@ const BrandChronoscope = () => {
   const [narrativeData, setNarrativeData] = useState(null);
   const [semanticDriftData, setSemanticDriftData] = useState(null);
 
-  const API_URL = 'http://127.0.0.1:8000';
+  //const API_URL = 'http://127.0.0.1:8000';
+
 
   // Fetch available datasets on mount
   useEffect(() => {
